@@ -13,3 +13,6 @@ sed??????
 # sons antigos que o jogo não usa mais
 public/jogo/assets/sons/antigos/
 public/jogo/assets/sons/_tmp.wav
+
+# link secreto do Render (Deploy Hook)
+deploy-hook.txt

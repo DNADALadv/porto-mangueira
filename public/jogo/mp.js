@@ -19,6 +19,11 @@ function linkUI(btn, box, sfx) {
     box.innerHTML = `✅ Link pronto! Mande para o seu amigo:<br><input readonly value="${url}" style="width:100%;margin:6px 0;padding:8px;border-radius:8px;border:0;font:600 14px Consolas,monospace;text-align:center"><button class="btn ghost" id="mpCopy${sfx}" style="padding:6px 14px;font-size:14px">📋 COPIAR LINK</button><br><small>Deixe o jogo aberto. O link muda se o servidor reiniciar. Seu amigo só abre o link, digita o nome e clica JOGAR.</small>`;
     const cb = document.getElementById('mpCopy' + sfx); cb.onclick = () => { navigator.clipboard?.writeText(url); cb.textContent = '✅ COPIADO'; };
   };
+  // link público (Render): carrega rápido para o amigo e funciona com o PC desligado
+  const PUB = 'https://porto-mangueira.onrender.com/jogo/';
+  box.innerHTML = `🌍 <b>Link do jogo online</b> (rápido, sempre no ar):<br><input readonly value="${PUB}" style="width:100%;margin:6px 0;padding:8px;border-radius:8px;border:0;font:600 14px Consolas,monospace;text-align:center"><button class="btn ghost" id="mpPub${sfx}" style="padding:6px 14px;font-size:14px">📋 COPIAR</button><br><small>Para jogarem juntos, os dois entram por esse link. Sala própria: acrescente ?sala=nome. O botão acima cria um link pelo seu PC (mais lento).</small>`;
+  document.getElementById('mpPub' + sfx).onclick = e => { navigator.clipboard?.writeText(PUB); e.target.textContent = '✅ COPIADO'; };
+  btn.textContent = '🔗 LINK PELO MEU PC (lento)';
   btn.onclick = async () => {
     btn.disabled = true; box.textContent = '⏳ Criando o link (até 30 segundos)...';
     try { const r = await fetch('/api/mp/tunnel', { method: 'POST' }).then(r => r.json()); if (r.url) show(r.url); else box.textContent = '❌ ' + (r.error || 'não deu certo') + ' — tente de novo ou use o JOGAR-ONLINE.bat'; }
