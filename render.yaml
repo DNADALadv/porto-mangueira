@@ -1,0 +1,14 @@
+# Publicação grátis no Render (render.com): o servidor online do jogo (server/) — entrega o jogo e o multiplayer.
+# No Render: New + → Blueprint → escolha este repositório. Ele lê este arquivo e cria o serviço sozinho.
+services:
+  - type: web
+    name: porto-mangueira
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node index.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

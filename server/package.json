@@ -1,0 +1,17 @@
+{
+  "name": "porto-mangueira-servidor",
+  "version": "1.0.0",
+  "description": "Servidor multiplayer (WebSocket) do jogo Porto Mangueira — entrega o jogo e sincroniza os jogadores",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "three": "^0.187.0",
+    "ws": "^8.21.3"
+  }
+}

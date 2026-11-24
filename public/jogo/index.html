@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Porto Mangueira — Caos ao Vivo</title>
+<style>
+  :root { --pink: #fe2c55; --cyan: #25f4ee; --gold: #ffd60a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', system-ui, Arial, sans-serif; color: #fff; user-select: none; }
+  #game { position: fixed; inset: 0; }
+  .hud { position: fixed; pointer-events: none; z-index: 10; text-shadow: 0 2px 3px #000, 0 0 2px #000; }
+  /* topo direito: arma, dinheiro, estrelas (estilo mundo aberto) */
+  #topright { top: 22px; right: 28px; text-align: right; transition: opacity .4s; }
+  #topright.dim { opacity: .0; }
+  #weapon { display: inline-flex; gap: 10px; align-items: center; background: linear-gradient(90deg, transparent, rgba(0,0,0,.55) 30%); padding: 6px 12px 6px 30px; border-radius: 4px; min-height: 62px; }
+  #weapon .wico img { height: 52px; filter: drop-shadow(0 2px 2px #000); display: block; } #weapon .emo { font-size: 38px; }
+  #weapon .wtxt { text-align: right; } #weapon .wa { font: italic 900 26px/1 'Arial Black', Arial, sans-serif; color: #fff; -webkit-text-stroke: 1px #000; }
+  #weapon .wa small { font-size: 17px; color: #ddd; } #weapon .wn { font-size: 13px; font-weight: 800; color: #ddd; letter-spacing: .5px; text-transform: uppercase; }
+  #weapon .rl { font-size: 16px; color: #ffd60a; }
+  #money { font: italic 900 40px/1.1 'Arial Black', Arial, sans-serif; color: #fff; margin-top: 4px; letter-spacing: 1px; -webkit-text-stroke: 1.5px #000; text-shadow: 0 3px 4px rgba(0,0,0,.7); }
+  #moneyPops { height: 0; } .money-pop { font: italic 900 26px/1.15 'Arial Black', Arial; color: #72e66e; -webkit-text-stroke: 1px #000; animation: mpop 2.6s forwards; }
+  .money-pop.neg { color: #ff5c5c; } @keyframes mpop { 0% { opacity: 0; transform: translateY(-8px); } 10%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  #stars { font-size: 38px; letter-spacing: 1px; transition: opacity .4s; } #stars span { color: rgba(0,0,0,.45); -webkit-text-stroke: 1.5px #fff; } #stars span.on { color: #fff; -webkit-text-stroke: 1.5px #000; } #stars.flash span.on { color: #4a7dff; }
+  #inv { font-weight: 900; color: var(--gold); font-size: 20px; }
+  /* baixo esquerdo: radar retangular + vida e colete */
+  #bottomleft { left: 26px; bottom: 26px; }
+  #minimap { width: 320px; height: 200px; display: block; border-radius: 10px; box-shadow: 0 4px 18px rgba(0,0,0,.65), inset 0 0 0 2px rgba(0,0,0,.6); outline: 2px solid rgba(0,0,0,.55); }
+  .bars { display: grid; grid-template-columns: 58% 1fr; gap: 4px; margin-top: 4px; width: 320px; }
+  .bar { height: 9px; background: rgba(0,0,0,.6); overflow: hidden; border: 1px solid rgba(0,0,0,.6); }
+  .bar div { height: 100%; transition: width .25s; }
+  #hp { background: #4fae4c; } #hp.low { background: #d9403a; animation: lowhp 0.8s infinite; } @keyframes lowhp { 50% { opacity: .5; } }
+  #armor { background: #4189d0; }
+  #live { margin-top: 6px; font-size: 13px; font-weight: 800; color: #aaa; } #live.on { color: #ff4d6d; }
+  /* caixa de ajuda */
+  #help-box { left: 26px; top: 22px; max-width: 360px; background: rgba(0,0,0,.78); padding: 12px 16px; border-radius: 3px; font-size: 17px; font-weight: 600; line-height: 1.35; opacity: 0; transform: translateY(-6px); transition: .2s; text-shadow: none; }
+  #help-box.show { opacity: 1; transform: none; } #help-box kbd { background: #eee; color: #111; border-radius: 4px; padding: 1px 7px; font-weight: 900; font-family: inherit; }
+  /* roda de armas */
+  #wheel { left: 50%; top: 50%; width: 0; height: 0; display: none; } #wheel.show { display: block; }
+  #wheel .slot { position: absolute; left: -75px; top: -48px; width: 150px; height: 96px; background: rgba(0,0,0,.62); border: 2px solid rgba(255,255,255,.15); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-shadow: none; }
+  #wheel .slot img { height: 40px; } #wheel .slot .emo { font-size: 30px; } #wheel .slot b { font-size: 12px; letter-spacing: .3px; } #wheel .slot i { font-size: 12px; color: #bbb; font-style: normal; }
+  #wheel .slot.on { border-color: #fff; background: rgba(40,40,40,.85); box-shadow: 0 0 18px rgba(255,255,255,.35); } #wheel .slot.off { opacity: .35; }
+  #wheel .center { position: absolute; left: -80px; top: -50px; width: 160px; height: 100px; text-align: center; font-weight: 900; font-size: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #wheel .center img { height: 44px; }
+  /* luneta */
+  #scope { inset: 0; display: none; background: radial-gradient(circle at center, transparent 0, transparent 34vh, #000 34.3vh); }
+  #scope.show { display: block; } #scope:before, #scope:after { content: ''; position: absolute; background: #000; }
+  #scope:before { left: 0; right: 0; top: 50%; height: 2px; } #scope:after { top: 0; bottom: 0; left: 50%; width: 2px; }
+  /* loja de armas */
+  #shop { z-index: 35; background: rgba(0,0,0,.55); align-items: flex-start; justify-content: flex-start; padding: 60px; }
+  #shop .panel { width: 560px; max-height: calc(100vh - 120px); display: flex; flex-direction: column; background: rgba(12,12,16,.94); border-radius: 4px; overflow: hidden; box-shadow: 0 10px 40px #000; }
+  #shop .hd { background: linear-gradient(90deg, #8a1010, #c62828); padding: 18px 22px; font: italic 900 34px 'Arial Black', Arial; letter-spacing: 1px; }
+  #shop .sub { padding: 8px 22px; background: #000; color: #ccc; font-weight: 700; display: flex; justify-content: space-between; }
+  #shop .it { display: grid; grid-template-columns: 110px 1fr auto; gap: 14px; align-items: center; padding: 10px 22px; border-bottom: 1px solid #ffffff10; cursor: pointer; pointer-events: auto; }
+  #shop .it:hover, #shop .it.sel { background: rgba(255,255,255,.12); } #shop .it img { height: 38px; } #shop .it .emo { font-size: 30px; }
+  #shop .it .nm { font-weight: 800; font-size: 17px; } #shop .it .ds { font-size: 13px; color: #aaa; } #shop .it .pr { font: italic 900 20px 'Arial Black', Arial; color: #72e66e; }
+  #shop .list { overflow-y: auto; flex: 1; pointer-events: auto; } #shop .sec { padding: 8px 22px 4px; font: 900 12px Arial; letter-spacing: 2px; color: #ff6b6b; background: #0006; }
+  #shop .it.no .pr { color: #ff5c5c; } #shop .ft { padding: 12px 22px; color: #aaa; font-size: 14px; }
+  #bigmap { z-index: 36; background: #121a22; display: none; } #bigmap.show { display: block; }
+  #bigmapCv { position: absolute; inset: 0; cursor: crosshair; }
+  #bigmap .mhd { position: absolute; left: 0; right: 0; top: 0; padding: 16px 30px; font: italic 900 30px 'Arial Black', Arial; background: linear-gradient(180deg, rgba(0,0,0,.85), transparent); pointer-events: none; }
+  #bigmapInfo { position: absolute; left: 30px; top: 66px; font-size: 18px; font-weight: 700; color: #e9d5ff; text-shadow: 0 2px 3px #000; pointer-events: none; }
+  #bigmap .mleg { position: absolute; right: 26px; top: 20px; background: rgba(0,0,0,.72); padding: 12px 16px; border-radius: 6px; display: flex; flex-direction: column; gap: 6px; font-weight: 700; font-size: 15px; pointer-events: none; }
+  #bigmap .mleg i { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; align-items: center; justify-content: center; font-style: normal; font-size: 12px; margin-right: 8px; border: 2px solid #000; }
+  #bigmap .mhelp { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px; text-align: center; background: linear-gradient(0deg, rgba(0,0,0,.85), transparent); font-weight: 700; pointer-events: none; }
+  #fade { inset: 0; background: #000; opacity: 0; transition: opacity .35s; z-index: 25; }
+  #fade.on { opacity: 1; }
+  /* mira */
+  #cross { left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; }
+  #cross:before, #cross:after { content: ''; position: absolute; background: #fff; box-shadow: 0 0 3px #000; }
+  #cross:before { left: 12px; top: 3px; width: 2px; height: 20px; } #cross:after { top: 12px; left: 3px; height: 2px; width: 20px; }
+  #hitmarker { left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px 0 0 -17px; opacity: 0; border: 3px solid #ff4d4d; transform: rotate(45deg) scale(.6); border-radius: 4px; }
+  #hitmarker.on { animation: hm .25s; } @keyframes hm { 0% { opacity: 1; transform: rotate(45deg) scale(.9); } 100% { opacity: 0; transform: rotate(45deg) scale(.5); } }
+  #vignette { inset: 0; opacity: 0; transition: opacity .3s; background: radial-gradient(ellipse at center, transparent 45%, rgba(200,0,0,.75)); }
+  /* feed da live */
+  #feed { right: 28px; top: 200px; width: 380px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .feed-item { background: rgba(10,10,20,.72); border-radius: 12px; padding: 7px 12px; font-size: 16px; font-weight: 600; border-right: 5px solid var(--cyan); animation: fin .3s; max-width: 380px; text-align: right; }
+  .feed-item.help { border-color: #30d158; } .feed-item.sab { border-color: #ff3b5c; } .feed-item.legend { border-color: var(--gold); background: rgba(60,40,0,.8); } .feed-item.chat { border-color: #8e8e93; font-size: 14px; }
+  .feed-item.out { opacity: 0; transition: opacity .6s; }
+  @keyframes fin { from { transform: translateX(40px); opacity: 0; } }
+  /* tabela de presentes */
+  #legend { left: 26px; top: 86px; width: 290px; max-height: calc(100vh - 380px); overflow: hidden; background: rgba(10,10,20,.66); border-radius: 14px; padding: 10px 14px; font-size: 13.5px; font-weight: 600; line-height: 1.45; }
+  #legend.hide { display: none; } #legend .lh { font-weight: 900; color: var(--gold); margin-top: 4px; letter-spacing: .5px; } #legend .lh.sab { color: #ff6b6b; }
+  #legend b { display: inline-block; min-width: 46px; } .t0 { color: #c7cbd6; } .t1 { color: var(--cyan); } .t2 { color: var(--gold); } .t3 { color: #ff4d6d; }
+  /* avisos */
+  #announce { left: 50%; top: 22%; transform: translateX(-50%); text-align: center; opacity: 0; }
+  #announce.show { animation: ann 3.8s forwards; }
+  #announce .t { font-size: 58px; font-weight: 900; font-family: 'Arial Black', Arial, sans-serif; letter-spacing: 1px; -webkit-text-stroke: 2px #000; }
+  #announce .s { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  @keyframes ann { 0% { opacity: 0; transform: translateX(-50%) scale(1.6); } 8% { opacity: 1; transform: translateX(-50%) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; } }
+  #carHint { display: none !important; left: 50%; bottom: 28%; transform: translateX(-50%); background: rgba(0,0,0,.6); padding: 6px 14px; border-radius: 10px; font-weight: 800; display: none; }
+  #boss { left: 50%; top: 14px; transform: translateX(-50%); width: 520px; display: none; text-align: center; }
+  #boss .bb { height: 16px; background: #300; border-radius: 8px; overflow: hidden; border: 2px solid #ff4d6d; } #bossBar { height: 100%; background: linear-gradient(90deg, #ff2d55, #ff9f0a); transition: width .2s; }
+  #bossName { font-weight: 900; font-size: 18px; color: #ff6b6b; letter-spacing: 2px; }
+  /* telas */
+  .screen { position: fixed; inset: 0; z-index: 30; display: none; align-items: center; justify-content: center; flex-direction: column; }
+  .screen.show { display: flex; }
+  #dead { background: radial-gradient(ellipse, rgba(80,0,0,.5), rgba(0,0,0,.85)); pointer-events: none; }
+  #dead .big { font-size: 90px; font-weight: 900; color: #ff2d55; font-family: 'Arial Black', Arial; -webkit-text-stroke: 3px #000; letter-spacing: 4px; animation: deadIn .8s; }
+  @keyframes deadIn { from { transform: scale(2); opacity: 0; } }
+  #deadBy { font-size: 26px; font-weight: 700; margin-top: 8px; }
+  #title { display: flex; background: radial-gradient(ellipse at 50% 30%, rgba(254,44,85,.35), transparent 60%), linear-gradient(180deg, rgba(10,8,30,.65), rgba(0,0,0,.92)); }
+  #title.hide { display: none; }
+  .logo { font-family: 'Arial Black', Arial, sans-serif; font-size: 84px; line-height: .95; text-align: center; letter-spacing: 2px; background: linear-gradient(180deg, #fff 30%, #ffd60a 70%, #ff7a00); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 6px 0 #000) drop-shadow(0 0 30px rgba(255,120,0,.5)); transform: rotate(-3deg); }
+  .logo small { display: block; font-size: 40px; background: linear-gradient(180deg, #25f4ee, #fe2c55); -webkit-background-clip: text; background-clip: text; }
+  .tag { margin: 18px 0 26px; font-size: 19px; font-weight: 700; color: #ddd; text-align: center; max-width: 700px; }
+  .btn { pointer-events: auto; cursor: pointer; font-size: 26px; font-weight: 900; padding: 14px 46px; border-radius: 16px; border: 0; background: linear-gradient(180deg, #ff4d6d, #c9183c); color: #fff; box-shadow: 0 8px 0 #7a0b22, 0 12px 30px rgba(254,44,85,.5); letter-spacing: 1px; }
+  .btn:active { transform: translateY(4px); box-shadow: 0 4px 0 #7a0b22; }
+  .controls { display: grid; grid-template-columns: auto auto; gap: 4px 22px; margin-top: 26px; font-size: 15px; color: #ccc; background: rgba(255,255,255,.06); padding: 14px 20px; border-radius: 14px; }
+  .controls b { color: var(--gold); }
+  #pause { background: rgba(0,0,0,.7); }
+  #help { z-index: 31; background: rgba(0,0,0,.75); }
+  .btn.ghost { background: rgba(255,255,255,.12); box-shadow: none; font-size: 18px; padding: 10px 28px; }
+  #fps { right: 22px; bottom: 14px; font-weight: 900; color: #6bff8f; font-size: 16px; display: none; }
+  #settings { background: rgba(0,0,0,.72); z-index: 40; }
+  #settings .panel { width: min(760px, 94vw); max-height: 86vh; overflow: auto; background: rgba(18,18,28,.96); border: 1px solid #333; border-radius: 18px; padding: 22px 26px; }
+  #settings .ttl { font-size: 28px; font-weight: 900; margin-bottom: 12px; }
+  #settings .tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  #settings .tab { background: #2a2a3c; color: #fff; border: 0; border-radius: 10px; padding: 8px 16px; font-weight: 800; cursor: pointer; font-size: 15px; }
+  #settings .tab.on { background: var(--pink); }
+  #settings .page { display: none; } #settings .page.on { display: block; }
+  #settings .row { display: grid; grid-template-columns: 1fr 220px 60px; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid #ffffff12; font-size: 16px; }
+  #settings .row select, #settings .row input[type=range] { width: 100%; } #settings .row select { background: #0d0d14; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 6px; font-size: 15px; }
+  #settings .row input[type=checkbox] { width: 22px; height: 22px; justify-self: start; }
+  #settings .row b { color: var(--gold); text-align: right; }
+  #settings .btns { display: flex; justify-content: space-between; margin-top: 18px; }
+  #settings .btns button { border: 0; border-radius: 10px; padding: 10px 18px; font-weight: 800; cursor: pointer; background: #2a2a3c; color: #fff; font-size: 15px; }
+  #settings .btns .primary { background: var(--pink); }
+  .disclaimer { position: absolute; bottom: 14px; font-size: 12px; color: #888; }
+</style>
+<script type="importmap">{ "imports": { "three": "/vendor/three/three.module.js", "three/addons/": "/vendor/three-addons/" } }</script>
+</head>
+<body>
+<div id="game"></div>
+
+<div class="hud" id="legend"></div>
+<div class="hud" id="topright"><div id="weapon"></div><div id="money">R$ 0</div><div id="moneyPops"></div><div id="stars"></div><div id="inv"></div></div>
+<div class="hud" id="feed"></div>
+<div class="hud" id="help-box"></div>
+<div class="hud" id="bottomleft">
+  <canvas id="minimap" width="320" height="200"></canvas>
+  <div class="bars"><div class="bar"><div id="hp" style="width:100%"></div></div><div class="bar"><div id="armor" style="width:0"></div></div></div>
+  <div id="live">○ live desconectada</div>
+</div>
+<div class="hud" id="scope"></div>
+<div class="hud" id="wheel"></div>
+<div class="hud" id="fade"></div>
+<div class="screen" id="shop"></div>
+<div class="screen" id="bigmap"><canvas id="bigmapCv"></canvas>
+  <div class="mhd">MAPA • PORTO MANGUEIRA</div>
+  <div id="bigmapInfo"></div>
+  <div class="mleg"><span><i style="background:#d32f2f">+</i> Hospital</span><span><i style="background:#1e4fd1">★</i> Delegacia</span><span><i style="background:#1d1d1d">🔫</i> Armas &amp; Cia</span><span><i style="background:#2f7d32">$</i> Mercadinho</span><span><i style="background:#3a6fd8">🚗</i> Seu carro</span><span><i style="background:#c86df0">◆</i> Destino</span></div>
+  <div class="mhelp">arrastar = mover • rodinha = zoom • clique = marcar destino • M ou ESC = fechar</div>
+</div>
+<div class="hud" id="cross"></div>
+<div class="hud" id="hitmarker"></div>
+<div class="hud" id="vignette"></div>
+<div class="hud" id="announce"></div>
+<div class="hud" id="carHint">[F] entrar no carro</div>
+<div class="hud" id="boss"><div id="bossName">CHEFÃO</div><div class="bb"><div id="bossBar"></div></div></div>
+
+<div class="screen" id="dead"><div class="big">DERRUBADO</div><div id="deadBy"></div></div>
+
+<div id="mpList" style="position:fixed;top:232px;right:24px;z-index:6;font:600 13px 'Segoe UI',Arial;color:#fff;text-shadow:0 1px 3px #000;text-align:right;line-height:1.5;pointer-events:none"></div>
+<div class="screen show" id="title">
+  <div class="logo">PORTO MANGUEIRA<small>CAOS AO VIVO</small></div>
+  <div class="tag">A cidade é sua… até a live decidir o contrário. Presentes fazem chover carros e dão armas. Sabotagens soltam bichos, gangues, polícia e o CHEFÃO.</div>
+  <input id="mpName" maxlength="18" placeholder="Seu nome no online" autocomplete="off" style="display:block;margin:0 auto 12px;padding:10px 14px;width:260px;border-radius:10px;border:2px solid rgba(255,255,255,.25);background:rgba(0,0,0,.45);color:#fff;font:600 16px 'Segoe UI',Arial;text-align:center">
+  <button class="btn" id="play">▶ JOGAR</button>
+  <button class="btn ghost" id="openSettings2" style="margin-top:14px">⚙️ CONFIGURAÇÕES</button>
+  <button class="btn ghost" id="mpLinkBtn" style="margin-top:10px">🌐 JOGAR COM AMIGO</button>
+  <div id="mpLinkBox" style="margin:10px auto 0;max-width:560px;font:600 14px 'Segoe UI',Arial;color:#fff;text-align:center;line-height:1.5"></div>
+  <div class="controls">
+    <span><b>WASD</b> andar / dirigir</span><span><b>Mouse</b> mirar • <b>Clique</b> atirar</span>
+    <span><b>Shift</b> correr</span><span><b>Botão direito</b> mira de perto</span>
+    <span><b>Espaço</b> pular / freio de mão</span><span><b>F</b> entrar e sair do carro</span>
+    <span><b>Tab (segurar)</b> roda de armas • <b>R</b> recarregar</span><span><b>C</b> primeira pessoa • <b>E</b> entrar em lojas/casas</span>
+    <span><b>1-9 / rodinha</b> trocar arma</span><span><b>L</b> tabela de presentes • <b>B</b> marcar loja de armas</span>
+    <span><b>P</b> pausar • <b>M</b> mapa • <b>K</b> som</span><span><b>O</b> configurações • <b>Q</b> qualidade gráfica</span>
+  </div>
+  <div class="disclaimer">Jogo original. Abra pelo painel com o servidor ligado para receber os presentes da live.<br>Créditos: carro "Ferrari 458 Italia" por vicent091036 (CC-BY 4.0) • carros Fairheaven, Negotiator, Kiri, Riverside, Canyon Taxi, Shvan, Lightbody, LCT 3000 e Phoenix, e prédios Downtown, Brownstone, Industrial e Midcity por Daniel Zhabotinsky (Sketchfab, CC-BY 4.0) • moto Honda CB750 por Alex.Ka., AK-47 por billyjackman3d, 9A-91 por valterjherson1, Remington 870 por tris09, Kar98k por dsamuta, RPG-7 por javadbayat, rochedo "Rockcliff" por bumstrum (Sketchfab, CC-BY 4.0) • textura de rocha Poly Haven (CC0) • personagem Soldier (exemplos do three.js) • texturas e objetos Poly Haven (CC0) • tiros, recargas e machado: Pixabay (licença Pixabay) • robô, monstros e machado 3D: Pixabay • sons de cidade, motor e explosões: OpenGameArt (CC0)</div>
+</div>
+<div class="screen" id="pause"><div class="logo" style="font-size:60px">PAUSADO</div><br><button class="btn" id="resume">▶ CONTINUAR</button><br><button class="btn ghost" id="openSettings">⚙️ CONFIGURAÇÕES</button><br><button class="btn ghost" id="mpLinkBtn2" style="margin-top:10px">🌐 JOGAR COM AMIGO</button><div id="mpLinkBox2" style="margin:10px auto 0;max-width:560px;font:600 14px 'Segoe UI',Arial;color:#fff;text-align:center;line-height:1.5"></div></div>
+<div class="screen" id="settings"></div>
+<div class="hud" id="fps"></div>
+<div class="screen" id="help" onclick="this.classList.remove('show')">
+  <div class="controls" style="font-size:18px">
+    <span><b>WASD</b> andar / dirigir</span><span><b>Mouse</b> mirar • <b>Clique</b> atirar</span>
+    <span><b>Shift</b> correr</span><span><b>Botão direito</b> mira de perto</span>
+    <span><b>Espaço</b> pular / freio de mão</span><span><b>F</b> entrar e sair do carro</span>
+    <span><b>Tab (segurar)</b> roda de armas</span><span><b>L</b> mostrar/esconder presentes</span>
+    <span><b>C</b> primeira pessoa</span><span><b>E</b> entrar em lojas e casas</span>
+    <span><b>P</b> pausar • <b>M</b> mapa • <b>K</b> som</span><span><b>N</b> hora do dia • <b>Q</b> qualidade gráfica</span><span><b>X</b> gancho (sobe nos prédios) • <b>Y</b> chuva</span><span><b>F</b> com o carro andando = pular • lancha no píer da praia</span><span><b>G</b> sobe/desce do ônibus no ponto • motos estacionadas pela cidade</span><span><b>Enter</b> mensagem para o amigo (online)</span><span>🎮 <b>Controle</b>: RT atira • LT mira • A pula • B carro • X recarrega • Y gancho • LB/RB armas</span>
+  </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script type="module" src="./main.js"></script>
+<div id="zone"></div>
+<style>
+  #zone { position: fixed; right: 34px; bottom: 60px; font: 900 34px/1 'Segoe UI', sans-serif; color: #fff; letter-spacing: 2px; text-shadow: 0 3px 0 #000, 0 0 12px rgba(0,0,0,.8); opacity: 0; pointer-events: none; z-index: 20; font-style: italic; }
+  #zone.show { animation: zoneIn 4s ease forwards; }
+  @keyframes zoneIn { 0% { opacity: 0; transform: translateX(30px); } 10%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+</style>
+</body>
+</html>

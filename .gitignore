@@ -1,0 +1,15 @@
+# NUNCA publicar: chaves da live (TikTok) e da IA ficam aqui
+config.json
+.env
+*.env
+
+# dependências e lixo de editor
+node_modules/
+server/node_modules/
+*.tmp.*
+sed??????
+*.log
+
+# sons antigos que o jogo não usa mais
+public/jogo/assets/sons/antigos/
+public/jogo/assets/sons/_tmp.wav
