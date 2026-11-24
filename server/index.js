@@ -15,7 +15,9 @@ const SEED = Number(process.env.SEED) || Math.floor(Math.random() * 1e9);
 
 // three.js: usa o da pasta server/node_modules ou o do projeto
 const require = createRequire(import.meta.url);
-let THREE_DIR; try { THREE_DIR = path.dirname(require.resolve('three/package.json')); } catch { THREE_DIR = path.join(ROOT, 'node_modules', 'three'); }
+// (o "exports" do three não libera three/package.json; procura a pasta direto)
+const THREE_DIR = [path.join(__dirname, 'node_modules', 'three'), path.join(ROOT, 'node_modules', 'three')].find(d => fs.existsSync(path.join(d, 'build', 'three.module.js'))) || path.join(__dirname, 'node_modules', 'three');
+void require;
 
 const MOUNTS = [
   ['/jogo/', path.join(ROOT, 'public', 'jogo')],
